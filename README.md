@@ -1,83 +1,50 @@
-# TP_Transformer
-
-###installation de hdf5.h
-#### HDF5 :
- Installez la bibliothèque HDF5. Si vous utilisez une distribution Linux basée sur Debian (comme Ubuntu), vous pouvez l'installer en utilisant apt-get :
-
-sh
-
-sudo apt-get update
-sudo apt-get install libhdf5-dev
-
-#### CBLAS :
-Installez la bibliothèque CBLAS pour les opérations de calcul matriciel :
-
-sh
-
-sudo apt-get install libblas-dev
-sudo apt-get install liblapack-dev
+## Apres Elaboration du fichier d'entete
 
 
-#### Étape 1: Créer ou ouvrir le fichier c_cpp_properties.json
+1. Matrice : Une structure de base pour représenter une matrice.
+2. AttentionLayer : Représente une couche d'attention avec des matrices de poids pour les requêtes, clés, valeurs et la sortie.
+3. FeedForwardLayer : Représente une couche de réseau feed-forward avec deux couches de poids et biais.
+4. EncoderLayer : Contient une couche d'attention et une couche feed-forward, ainsi que des matrices de normalisation.
+5. DecoderLayer : Similaire à EncoderLayer, mais avec une couche d'attention supplémentaire pour les encodeurs.
+6. Transformer : La structure principale qui regroupe les encodeurs, les décodeurs et la matrice d'embedding.
+Prochaines Étapes
+7. Implémenter les Fonctions : Implémentez les fonctions déclarées dans transformer.h dans un fichier source transformer.c.
+8. Gestion de la Mémoire : Assurez-vous de bien gérer l'allocation et la libération de la mémoire pour éviter les fuites.
+9. Algorithmes d'Apprentissage : Ajoutez les algorithmes nécessaires pour l'entraînement et l'inférence du transformateur.
 
-    Ouvrez Visual Studio Code.
-    Naviguez vers votre espace de travail ou projet.
-    Créez un dossier nommé .vscode à la racine de votre projet si ce n'est pas déjà fait.
-    Dans le dossier .vscode, créez un fichier nommé c_cpp_properties.json. Si le fichier existe déjà, ouvrez-le.
+Ce squelette vous donne un bon point de départ pour structurer votre transformateur en C. Vous pouvez ensuite ajouter plus de détails et fonctionnalités au fur et à mesure.
 
-#### Étape 2: Modifier c_cpp_properties.json
 
-    Ouvrez le fichier c_cpp_properties.json.
-    Ajoutez la configuration suivante pour inclure les chemins nécessaires :
+## Apres l'ajout des fonctions permettant de manipuler les matrice
 
-json
+### Explication
 
-{
-    "configurations": [
-        {
-            "name": "Linux",
-            "includePath": [
-                "${workspaceFolder}/**",
-                "/usr/include/hdf5/serial",
-                "/usr/include/x86_64-linux-gnu"
-            ],
-            "defines": [],
-            "compilerPath": "/usr/bin/gcc",
-            "cStandard": "c11",
-            "cppStandard": "c++17",
-            "intelliSenseMode": "linux-gcc-x64"
-        }
-    ],
-    "version": 4
-}
+Matrice : Une structure de base pour représenter une matrice.
+AttentionLayer : Représente une couche d'attention avec des matrices de poids pour les requêtes, clés, valeurs et la sortie.
+FeedForwardLayer : Représente une couche de réseau feed-forward avec deux couches de poids et biais.
+EncoderLayer : Contient une couche d'attention et une couche feed-forward, ainsi que des matrices de normalisation.
+DecoderLayer : Similaire à EncoderLayer, mais avec une couche d'attention supplémentaire pour les encodeurs.
+Transformer : La structure principale qui regroupe les encodeurs, les décodeurs et la matrice d'embedding.
+Prochaines Étapes
+Implémenter les Fonctions : Implémentez les fonctions déclarées dans transformer.h dans un fichier source transformer.c.
+Gestion de la Mémoire : Assurez-vous de bien gérer l'allocation et la libération de la mémoire pour éviter les fuites.
+Algorithmes d'Apprentissage : Ajoutez les algorithmes nécessaires pour l'entraînement et l'inférence du transformateur.
+Ce squelette vous donne un bon point de départ pour structurer votre transformateur en C. Vous pouvez ensuite ajouter plus de détails et fonctionnalités au fur et à mesure.
 
-#### Étape 3: Sauvegarder et redémarrer Visual Studio Code
 
-    Sauvegardez le fichier c_cpp_properties.json.
-    Redémarrez Visual Studio Code pour que les changements prennent effet.
+#####
+Explication des Fonctions
+create_attention_layer :
 
-    #### Étape 1: Vérifiez l'emplacement du fichier hdf5.h
+Cette fonction alloue de la mémoire pour une structure AttentionLayer.
+Elle initialise les matrices de poids query_weights, key_weights, value_weights et output_weights en appelant la fonction create_matrix avec les dimensions appropriées (dans ce cas, d_model x d_model).
+Si l'allocation de mémoire échoue, elle affiche un message d'erreur et termine le programme.
+free_attention_layer :
 
-    Recherchez le fichier hdf5.h pour vérifier son emplacement exact.
-        Utilisez la commande find pour localiser le fichier :
+Cette fonction libère la mémoire allouée pour une structure AttentionLayer.
+Elle vérifie si les matrices de poids ne sont pas nulles avant de les libérer en appelant free_matrix.
+Enfin, elle libère la mémoire allouée pour la structure AttentionLayer.
+Compilation et Utilisation
+Pour utiliser ces fonctions, vous devez inclure le fichier d'en-tête transformer.h dans votre fichier source et lier correctement les fichiers lors de la compilation.
 
-        bash
-
-        find /usr/include -name hdf5.h
-
-        Vous devriez obtenir quelque chose comme /usr/include/hdf5/serial/hdf5.h ou un chemin similaire.
-
-#### Étape 2: Mettez à jour la commande gcc
-
-    Ajoutez le chemin correct au includePath dans la commande gcc :
-        Supposons que le fichier se trouve dans /usr/include/hdf5/serial, vous devrez mettre à jour votre commande gcc comme suit :
-
-        bash
-
-gcc -I/usr/include/hdf5/serial hdf5_reader.c -o p -lhdf5
-Puisque le fichier hdf5.h se trouve dans /usr/include/hdf5/serial/, vous devez inclure ce chemin dans votre commande gcc. Voici la commande mise à jour :
-
-bash
-
-gcc -I/usr/include/hdf5/serial hdf5_reader.c -o p -lhdf5
-
+#####
