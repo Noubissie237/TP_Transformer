@@ -1,82 +1,45 @@
 #ifndef TRANSFORMER_H
 #define TRANSFORMER_H
+#include "data_processing.h"
+#define MAX_PARAMETERS 1000
 
-#include <stdio.h>
-#include <stdlib.h>
-
-// Structure pour représenter une matrice
 typedef struct {
-    float* data;
-    int rows;
-    int cols;
-} Matrix;
-
-// Structure pour représenter une couche d'attention
-typedef struct {
-    Matrix* query_weights;
-    Matrix* key_weights;
-    Matrix* value_weights;
-    Matrix* output_weights;
-} AttentionLayer;
-
-// Structure pour représenter une couche de feed-forward
-typedef struct {
-    Matrix* weights1;
-    Matrix* bias1;
-    Matrix* weights2;
-    Matrix* bias2;
-} FeedForwardLayer;
-
-// Structure pour représenter un encodeur
-typedef struct {
-    AttentionLayer* attention_layer;
-    FeedForwardLayer* feed_forward_layer;
-    Matrix* norm1;
-    Matrix* norm2;
-} EncoderLayer;
-
-// Structure pour représenter un décodeur
-typedef struct {
-    AttentionLayer* self_attention_layer;
-    AttentionLayer* encoder_attention_layer;
-    FeedForwardLayer* feed_forward_layer;
-    Matrix* norm1;
-    Matrix* norm2;
-    Matrix* norm3;
-} DecoderLayer;
-
-// Structure pour représenter un transformateur complet
-typedef struct {
-    EncoderLayer* encoder_layers;
-    DecoderLayer* decoder_layers;
-    Matrix* embedding_matrix;
-    int num_encoder_layers;
-    int num_decoder_layers;
-    int vocab_size;
+    int num_layers;
     int d_model;
-} Transformer;
+    int num_heads;
+    int dff;
+    int input_vocab_size;
+    int target_vocab_size;
+    float dropout_rate;
 
-// Fonctions pour manipuler les matrices
-Matrix* create_matrix(int rows, int cols);
-void free_matrix(Matrix* matrix);
-void print_matrix(Matrix* matrix);
+    int num_parameters;
+    float encoder_params[MAX_PARAMETERS];
+    float decoder_params[MAX_PARAMETERS];
+} TransformerModel;
 
-// Fonctions pour initialiser et libérer les couches d'attention
-AttentionLayer* create_attention_layer(int d_model);
-void free_attention_layer(AttentionLayer* layer);
+typedef struct {
+    float learning_rate;
+} Optimizer;
 
-// Fonctions pour initialiser et libérer les couches de feed-forward
-FeedForwardLayer* create_feed_forward_layer(int d_model, int d_ff);
-void free_feed_forward_layer(FeedForwardLayer* layer);
+typedef struct {
+    int num_predictions;
+    int predictions[MAX_REVIEWS];
+} Predictions;
 
-// Fonctions pour initialiser et libérer les encodeurs et décodeurs
-EncoderLayer* create_encoder_layer(int d_model, int d_ff);
-void free_encoder_layer(EncoderLayer* layer);
-DecoderLayer* create_decoder_layer(int d_model, int d_ff);
-void free_decoder_layer(DecoderLayer* layer);
+void init_transformer(TransformerModel* model);
+void save_model(TransformerModel* model, const char* filename);
+void load_model(TransformerModel* model, const char* filename);
 
-// Fonctions pour initialiser et libérer un transformateur complet
-Transformer* create_transformer(int num_encoder_layers, int num_decoder_layers, int vocab_size, int d_model, int d_ff);
-void free_transformer(Transformer* transformer);
+Optimizer create_adam_optimizer(float learning_rate);
+void shuffle_data(Data* data);
+void get_batch(Data* data, int batch_size, int batch_num, char input_sequences[MAX_REVIEWS][MAX_REVIEW_LENGTH], int labels[MAX_REVIEWS]);
+
+void forward(TransformerModel* model, char input_sequences[MAX_REVIEWS][MAX_REVIEW_LENGTH], int batch_size, float* outputs);
+float compute_loss(float* outputs, int* labels, int batch_size);
+void backward(TransformerModel* model, float* logits, int* labels, int batch_size, int vocab_size);
+float compute_cross_entropy_loss(float* logits, int* labels, int batch_size, int vocab_size);
+void update_parameters(TransformerModel* model, Optimizer* optimizer);
+void train_transformer(TransformerModel* model, Data* data);
+Predictions predict(TransformerModel* model, Data* data);
 
 #endif // TRANSFORMER_H

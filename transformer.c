@@ -1,228 +1,175 @@
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <math.h>
 #include "transformer.h"
+float encoder_gradients[700]; // Gradients de l'encodeur (tableau)
+float decoder_gradients[700]; // Gradients du décodeur (tableau)
 
-/* --------------------------------- FONCTION PERMETTANT DE MANIPULER LA MATRICE --------------------------------- */
+void init_transformer(TransformerModel* model) {
+    model->num_layers = 6;
+    model->d_model = 4;
+    model->num_heads = 10;
+    model->dff = 10;
+    model->input_vocab_size = 8;
+    model->target_vocab_size = 8;
+    model->dropout_rate = 0.001f;
 
-// Fonction pour créer une matrice
-Matrix* create_matrix(int rows, int cols) {
-    Matrix* matrix = (Matrix*)malloc(sizeof(Matrix));
-    if (matrix == NULL) {
-        fprintf(stderr, "Erreur d'allocation de mémoire pour la matrice\n");
-        exit(EXIT_FAILURE);
-    }
-    matrix->rows = rows;
-    matrix->cols = cols;
-    matrix->data = (float*)malloc(rows * cols * sizeof(float));
-    if (matrix->data == NULL) {
-        fprintf(stderr, "Erreur d'allocation de mémoire pour les données de la matrice\n");
-        free(matrix);
-        exit(EXIT_FAILURE);
-    }
-    return matrix;
-}
+    model->num_parameters = model->num_layers * (4 * model->d_model * model->d_model + 2 * model->d_model) + 2 * model->d_model * model->target_vocab_size;
 
-// Fonction pour libérer la mémoire d'une matrice
-void free_matrix(Matrix* matrix) {
-    if (matrix != NULL) {
-        if (matrix->data != NULL) {
-            free(matrix->data);
-        }
-        free(matrix);
+    for (int i = 0; i < model->num_parameters; i++) {
+        model->encoder_params[i] = (float)rand() / RAND_MAX;
+        model->decoder_params[i] = (float)rand() / RAND_MAX;
     }
 }
 
-// Fonction pour afficher une matrice
-void print_matrix(Matrix* matrix) {
-    if (matrix == NULL) {
-        fprintf(stderr, "Matrice nulle\n");
+void save_model(TransformerModel* model, const char* filename) {
+    FILE* file = fopen(filename, "w");
+    if (!file) {
+        fprintf(stderr, "Erreur d'ouverture du fichier de sauvegarde.\n");
         return;
     }
-    for (int i = 0; i < matrix->rows; ++i) {
-        for (int j = 0; j < matrix->cols; ++j) {
-            printf("%f ", matrix->data[i * matrix->cols + j]);
+
+    fprintf(file, "%d %d %d %d %d %d %f\n", model->num_layers, model->d_model, model->num_heads, model->dff, model->input_vocab_size, model->target_vocab_size, model->dropout_rate);
+
+    for (int i = 0; i < model->num_parameters; i++) {
+        fprintf(file, "%f ", model->encoder_params[i]);
+    }
+    fprintf(file, "\n");
+
+    for (int i = 0; i < model->num_parameters; i++) {
+        fprintf(file, "%f ", model->decoder_params[i]);
+    }
+    fprintf(file, "\n");
+
+    fclose(file);
+}
+
+void load_model(TransformerModel* model, const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (!file) {
+        fprintf(stderr, "Erreur d'ouverture du fichier de chargement.\n");
+        return;
+    }
+
+    fscanf(file, "%d %d %d %d %d %d %f\n", &model->num_layers, &model->d_model, &model->num_heads, &model->dff, &model->input_vocab_size, &model->target_vocab_size, &model->dropout_rate);
+
+    for (int i = 0; i < model->num_parameters; i++) {
+        fscanf(file, "%f", &model->encoder_params[i]);
+    }
+
+    for (int i = 0; i < model->num_parameters; i++) {
+        fscanf(file, "%f", &model->decoder_params[i]);
+    }
+
+    fclose(file);
+}
+
+Optimizer create_adam_optimizer(float learning_rate) {
+    Optimizer optimizer;
+    optimizer.learning_rate = learning_rate;
+    return optimizer;
+}
+
+void shuffle_data(Data* data) {
+    srand(time(NULL));
+    for (int i = data->num_reviews - 1; i > 0; i--) {
+        int j = rand() % (i + 1);
+        char temp_review[MAX_REVIEW_LENGTH];
+        strcpy(temp_review, data->reviews[i]);
+        strcpy(data->reviews[i], data->reviews[j]);
+        strcpy(data->reviews[j], temp_review);
+
+        int temp_label = data->labels[i];
+        data->labels[i] = data->labels[j];
+        data->labels[j] = temp_label;
+    }
+}
+
+void get_batch(Data* data, int batch_size, int batch_num, char input_sequences[MAX_REVIEWS][MAX_REVIEW_LENGTH], int labels[MAX_REVIEWS]) {
+    int start_index = batch_num * batch_size;
+    int end_index = start_index + batch_size;
+    if (end_index > data->num_reviews) {
+        end_index = data->num_reviews;
+    }
+    for (int i = start_index; i < end_index; i++) {
+        strcpy(input_sequences[i - start_index], data->reviews[i]);
+        labels[i - start_index] = data->labels[i];
+    }
+}
+
+void forward(TransformerModel* model, char input_sequences[MAX_REVIEWS][MAX_REVIEW_LENGTH], int batch_size, float* outputs) {
+    for (int i = 0; i < batch_size; i++) {
+        outputs[i] = 0.5; // Faux résultat
+    }
+}
+
+float compute_loss(float* outputs, int* labels, int batch_size) {
+    float loss = 0.0;
+    for (int i = 0; i < batch_size; i++) {
+        loss += (outputs[i] - labels[i]) * (outputs[i] - labels[i]);
+    }
+    return loss / batch_size;
+}
+
+void backward(TransformerModel* model, float* logits, int* labels, int batch_size, int vocab_size) {
+    for (int i = 0; i < model->num_parameters; i++) {
+        encoder_gradients[i] = 0.01f;
+        decoder_gradients[i] = 0.01f;
+    }
+}
+
+float compute_cross_entropy_loss(float* logits, int* labels, int batch_size, int vocab_size) {
+    float loss = 0.0;
+    for (int i = 0; i < batch_size; i++) {
+        loss -= log(logits[i * vocab_size + labels[i]]);
+    }
+    return loss / batch_size;
+}
+
+void update_parameters(TransformerModel* model, Optimizer* optimizer) {
+    float learning_rate = optimizer->learning_rate;
+    for (int i = 0; i < model->num_parameters; i++) {
+        model->encoder_params[i] -= learning_rate * encoder_gradients[i];
+        model->decoder_params[i] -= learning_rate * decoder_gradients[i];
+    }
+}
+
+void train_transformer(TransformerModel* model, Data* data) {
+    int batch_size = 32;
+    int num_batches = (data->num_reviews + batch_size - 1) / batch_size;
+
+    Optimizer optimizer = create_adam_optimizer(0.001);
+
+    for (int epoch = 0; epoch < 10; epoch++) {
+        shuffle_data(data);
+        for (int batch_num = 0; batch_num < num_batches; batch_num++) {
+            char input_sequences[MAX_REVIEWS][MAX_REVIEW_LENGTH];
+            int labels[MAX_REVIEWS];
+            get_batch(data, batch_size, batch_num, input_sequences, labels);
+
+            float logits[MAX_REVIEWS];
+            forward(model, input_sequences, batch_size, logits);
+
+            float loss = compute_cross_entropy_loss(logits, labels, batch_size, model->target_vocab_size);
+            backward(model, logits, labels, batch_size, model->target_vocab_size);
+
+            update_parameters(model, &optimizer);
         }
-        printf("\n");
     }
 }
 
+Predictions predict(TransformerModel* model, Data* data) {
+    Predictions predictions;
+    predictions.num_predictions = data->num_reviews;
 
-/* --------------------------------- FONCTION PERMETTANT DE MANIPULER LA MATRICE --------------------------------- */
+    float logits[MAX_REVIEWS];
+    forward(model, data->reviews, data->num_reviews, logits);
 
-// Fonction pour créer une couche d'attention
-AttentionLayer* create_attention_layer(int d_model) {
-    AttentionLayer* layer = (AttentionLayer*)malloc(sizeof(AttentionLayer));
-    if (layer == NULL) {
-        fprintf(stderr, "Erreur d'allocation de mémoire pour la couche d'attention\n");
-        exit(EXIT_FAILURE);
-    }
-    
-    layer->query_weights = create_matrix(d_model, d_model);
-    layer->key_weights = create_matrix(d_model, d_model);
-    layer->value_weights = create_matrix(d_model, d_model);
-    layer->output_weights = create_matrix(d_model, d_model);
-    
-    return layer;
-}
-
-// Fonction pour libérer la mémoire d'une couche d'attention
-void free_attention_layer(AttentionLayer* layer) {
-    if (layer != NULL) {
-        if (layer->query_weights != NULL) free_matrix(layer->query_weights);
-        if (layer->key_weights != NULL) free_matrix(layer->key_weights);
-        if (layer->value_weights != NULL) free_matrix(layer->value_weights);
-        if (layer->output_weights != NULL) free_matrix(layer->output_weights);
-        free(layer);
-    }
-}
-
-// Fonction pour créer une couche de feed-forward
-FeedForwardLayer* create_feed_forward_layer(int d_model, int d_ff) {
-    FeedForwardLayer* layer = (FeedForwardLayer*)malloc(sizeof(FeedForwardLayer));
-    if (layer == NULL) {
-        fprintf(stderr, "Erreur d'allocation de mémoire pour la couche de feed-forward\n");
-        exit(EXIT_FAILURE);
+    for (int i = 0; i < data->num_reviews; i++) {
+        predictions.predictions[i] = logits[i] > 0.5 ? 1 : 0;
     }
 
-    layer->weights1 = create_matrix(d_model, d_ff);
-    layer->bias1 = create_matrix(1, d_ff);
-    layer->weights2 = create_matrix(d_ff, d_model);
-    layer->bias2 = create_matrix(1, d_model);
-
-    return layer;
-}
-
-// Fonction pour libérer la mémoire d'une couche de feed-forward
-void free_feed_forward_layer(FeedForwardLayer* layer) {
-    if (layer != NULL) {
-        if (layer->weights1 != NULL) free_matrix(layer->weights1);
-        if (layer->bias1 != NULL) free_matrix(layer->bias1);
-        if (layer->weights2 != NULL) free_matrix(layer->weights2);
-        if (layer->bias2 != NULL) free_matrix(layer->bias2);
-        free(layer);
-    }
-}
-
-// Fonction pour créer une couche d'encodeur
-EncoderLayer* create_encoder_layer(int d_model, int d_ff) {
-    EncoderLayer* layer = (EncoderLayer*)malloc(sizeof(EncoderLayer));
-    if (layer == NULL) {
-        fprintf(stderr, "Erreur d'allocation de mémoire pour la couche d'encodeur\n");
-        exit(EXIT_FAILURE);
-    }
-
-    layer->attention_layer = create_attention_layer(d_model);
-    layer->feed_forward_layer = create_feed_forward_layer(d_model, d_ff);
-    layer->norm1 = create_matrix(1, d_model);
-    layer->norm2 = create_matrix(1, d_model);
-
-    return layer;
-}
-
-// Fonction pour libérer la mémoire d'une couche d'encodeur
-void free_encoder_layer(EncoderLayer* layer) {
-    if (layer != NULL) {
-        if (layer->attention_layer != NULL) free_attention_layer(layer->attention_layer);
-        if (layer->feed_forward_layer != NULL) free_feed_forward_layer(layer->feed_forward_layer);
-        if (layer->norm1 != NULL) free_matrix(layer->norm1);
-        if (layer->norm2 != NULL) free_matrix(layer->norm2);
-        free(layer);
-    }
-}
-
-// Fonction pour créer une couche de décodeur
-DecoderLayer* create_decoder_layer(int d_model, int d_ff) {
-    DecoderLayer* layer = (DecoderLayer*)malloc(sizeof(DecoderLayer));
-    if (layer == NULL) {
-        fprintf(stderr, "Erreur d'allocation de mémoire pour la couche de décodeur\n");
-        exit(EXIT_FAILURE);
-    }
-
-    layer->self_attention_layer = create_attention_layer(d_model);
-    layer->encoder_attention_layer = create_attention_layer(d_model);
-    layer->feed_forward_layer = create_feed_forward_layer(d_model, d_ff);
-    layer->norm1 = create_matrix(1, d_model);
-    layer->norm2 = create_matrix(1, d_model);
-    layer->norm3 = create_matrix(1, d_model);
-
-    return layer;
-}
-
-// Fonction pour libérer la mémoire d'une couche de décodeur
-void free_decoder_layer(DecoderLayer* layer) {
-    if (layer != NULL) {
-        if (layer->self_attention_layer != NULL) free_attention_layer(layer->self_attention_layer);
-        if (layer->encoder_attention_layer != NULL) free_attention_layer(layer->encoder_attention_layer);
-        if (layer->feed_forward_layer != NULL) free_feed_forward_layer(layer->feed_forward_layer);
-        if (layer->norm1 != NULL) free_matrix(layer->norm1);
-        if (layer->norm2 != NULL) free_matrix(layer->norm2);
-        if (layer->norm3 != NULL) free_matrix(layer->norm3);
-        free(layer);
-    }
-}
-
-// Fonction pour créer un transformateur complet
-Transformer* create_transformer(int num_encoder_layers, int num_decoder_layers, int vocab_size, int d_model, int d_ff) {
-    Transformer* transformer = (Transformer*)malloc(sizeof(Transformer));
-    if (transformer == NULL) {
-        fprintf(stderr, "Erreur d'allocation de mémoire pour le transformateur\n");
-        exit(EXIT_FAILURE);
-    }
-
-    transformer->num_encoder_layers = num_encoder_layers;
-    transformer->num_decoder_layers = num_decoder_layers;
-    transformer->vocab_size = vocab_size;
-    transformer->d_model = d_model;
-
-    // Création des couches d'encodeur
-    transformer->encoder_layers = (EncoderLayer*)malloc(num_encoder_layers * sizeof(EncoderLayer));
-    if (transformer->encoder_layers == NULL) {
-        fprintf(stderr, "Erreur d'allocation de mémoire pour les couches d'encodeur\n");
-        free(transformer);
-        exit(EXIT_FAILURE);
-    }
-    for (int i = 0; i < num_encoder_layers; ++i) {
-        transformer->encoder_layers[i] = *create_encoder_layer(d_model, d_ff);
-    }
-
-    // Création des couches de décodeur
-    transformer->decoder_layers = (DecoderLayer*)malloc(num_decoder_layers * sizeof(DecoderLayer));
-    if (transformer->decoder_layers == NULL) {
-        fprintf(stderr, "Erreur d'allocation de mémoire pour les couches de décodeur\n");
-        free(transformer->encoder_layers);
-        free(transformer);
-        exit(EXIT_FAILURE);
-    }
-    for (int i = 0; i < num_decoder_layers; ++i) {
-        transformer->decoder_layers[i] = *create_decoder_layer(d_model, d_ff);
-    }
-
-    // Création de la matrice d'embedding
-    transformer->embedding_matrix = create_matrix(vocab_size, d_model);
-
-    return transformer;
-}
-
-// Fonction pour libérer la mémoire d'un transformateur complet
-void free_transformer(Transformer* transformer) {
-    if (transformer != NULL) {
-        if (transformer->encoder_layers != NULL) {
-            for (int i = 0; i < transformer->num_encoder_layers; ++i) {
-                free_encoder_layer(&transformer->encoder_layers[i]);
-            }
-            free(transformer->encoder_layers);
-        }
-
-        if (transformer->decoder_layers != NULL) {
-            for (int i = 0; i < transformer->num_decoder_layers; ++i) {
-                free_decoder_layer(&transformer->decoder_layers[i]);
-            }
-            free(transformer->decoder_layers);
-        }
-
-        if (transformer->embedding_matrix != NULL) {
-            free_matrix(transformer->embedding_matrix);
-        }
-
-        free(transformer);
-    }
+    return predictions;
 }
