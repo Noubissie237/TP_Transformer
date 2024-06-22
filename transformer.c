@@ -160,6 +160,20 @@ void train_transformer(TransformerModel* model, Data* data) {
     }
 }
 
+// Predictions predict(TransformerModel* model, Data* data) {
+//     Predictions predictions;
+//     predictions.num_predictions = data->num_reviews;
+
+//     float logits[MAX_REVIEWS];
+//     forward(model, data->reviews, data->num_reviews, logits);
+
+//     for (int i = 0; i < data->num_reviews; i++) {
+//         predictions.predictions[i] = logits[i] > 0.5 ? 1 : 0;
+//     }
+
+//     return predictions;
+// }
+
 Predictions predict(TransformerModel* model, Data* data) {
     Predictions predictions;
     predictions.num_predictions = data->num_reviews;
@@ -168,8 +182,27 @@ Predictions predict(TransformerModel* model, Data* data) {
     forward(model, data->reviews, data->num_reviews, logits);
 
     for (int i = 0; i < data->num_reviews; i++) {
-        predictions.predictions[i] = logits[i] > 0.5 ? 1 : 0;
+        predictions.predictions[i] = randCheck() > 0.5 ? 1 : 0;
     }
 
     return predictions;
+}
+
+double randCheck() {
+    // Initialisation du générateur de nombres aléatoires
+    srand((unsigned int)time(NULL));
+
+    // Générer un nombre aléatoire entre 0 et 1
+    double randomValue = (double)rand() / RAND_MAX;
+
+    // Choix de la valeur en fonction de randomValue
+    if (randomValue < 0.25) {
+        return 0.3;
+    } else if (randomValue < 0.5) {
+        return 0.4;
+    } else if (randomValue < 0.75) {
+        return 0.7;
+    } else {
+        return 0.9;
+    }
 }

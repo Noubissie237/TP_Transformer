@@ -41,5 +41,6 @@ float compute_cross_entropy_loss(float* logits, int* labels, int batch_size, int
 void update_parameters(TransformerModel* model, Optimizer* optimizer);
 void train_transformer(TransformerModel* model, Data* data);
 Predictions predict(TransformerModel* model, Data* data);
+double randCheck();
 
 #endif // TRANSFORMER_H
